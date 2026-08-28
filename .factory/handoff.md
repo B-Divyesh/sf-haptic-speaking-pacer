@@ -1,145 +1,153 @@
-# Handoff — Haptic Speaking Pacer v0.1.0 — **FAIL**
+# Handoff — Haptic Speaking Pacer v0.1.0 repair
 
-## Independent verification verdict (2026-08-28)
+## Result
 
-Candidate `c239d37e064c341283c757bafcb79fed4caca129` was independently tested
-against <https://haptic-speaking-pacer.sociobot.in/>. The live HTML, JS, and
-CSS hash-match a fresh candidate build, so this is not a stale-deployment
-result. **It does not pass release verification.** See
-`.factory/verification-1.md` for reproducible commands and full evidence.
+All release blockers in independent verification report commit
+`475d83c0f1bf2eee1c108f922cf93f21c3a5e695` were repaired without changing the
+researched brief, visual thesis, artifact class (`ios-ipa`), or core pacing
+behavior. The repaired PWA and managed license-verification endpoint are live
+at <https://haptic-speaking-pacer.sociobot.in/>.
 
-Release blockers:
+## Repairs
 
-- **P0:** the live $7 checkout uses the pilot billing API and returns HTTP 404.
-- **P0:** the advertised unsigned IPA download returns HTTP 404; no required
-  `ios-ipa` artifact is available to validate or install.
-- **P1:** a crafted JSON import persists and executes same-origin script after
-  reload (stored XSS); structural import validation is also non-atomic.
-- **P1:** 100 concurrent/burst invalid-license verification requests all
-  returned HTTP 200; no 429 or `Retry-After` was observed.
+- Production checkout is now the default and the deployed “Buy once — $7”
+  link resolves to the registered production Sociobot product. On 2026-08-28,
+  the endpoint returned HTTP 303 to the hosted Dodo checkout.
+- License verification now uses `/api/license/verify`, a same-origin Azure
+  Static Web Apps managed function that forwards to the production Sociobot
+  verifier, does not store tokens, returns `Cache-Control: no-store`, allows
+  only the Capacitor iOS origin cross-origin, and limits a client and each
+  function instance to 20 requests per 60 seconds. The app retains its
+  once-daily verdict cache and offline optimistic behavior.
+- JSON imports now have an exact, bounded schema for the envelope, sessions,
+  and samples. Unknown, missing, non-finite, inconsistent, duplicate, and
+  out-of-range data is rejected before IndexedDB opens. Accepted records are
+  written in one transaction. Invalid records left by the prior build are
+  removed before rendering, and every imported display value is escaped.
+- Static responses now ship CSP, Permissions-Policy, COOP, CORP, referrer, and
+  MIME-sniffing protections. HTML and the service worker revalidate; hashed
+  assets receive one-year immutable caching. The service worker never caches
+  license-verification requests and its shell cache advanced to `pace-trail-v2`.
+- The iOS workflow’s signing-secret condition is valid, the release is driven
+  by tag `v0.1.0`, and the unsigned IPA is stored without ZIP compression so
+  the complete installable archive remains above the verifier’s 1 MB floor.
+  The landing page links both the IPA and `SHA256SUMS` and explains unsigned
+  sideloading and Apple distribution requirements.
 
-The candidate’s unit tests, production build, included Playwright suite,
-offline reload, desktop/mobile visual smoke tests, Axe serious/critical scan,
-and local Lighthouse run passed. The prior content below describes the
-implemented intent, but must not be read as a shipping PASS until the blockers
-above are remediated and independently retested.
+## Exact regression coverage
 
-## What was built
+- `tests/session-schema.test.ts` rejects the verifier’s executable
+  `averageWpm` string, the `{id,samples}` partial record, unknown fields,
+  inconsistent summaries/states, and duplicate IDs; valid native exports and
+  raw arrays remain accepted.
+- `tests/e2e/app.spec.ts` submits the verifier’s crafted payload and a mixed
+  valid/partial file, confirms neither writes anything, seeds a legacy crafted
+  IndexedDB record, reloads, confirms no element/script appears, and confirms
+  the poisoned record is removed. It also covers production checkout identity
+  and the same-origin restore route.
+- `tests/rate-limit.test.ts` proves the first 20 verification requests pass and
+  the next returns 429 with a positive `Retry-After`; it also checks that only
+  `capacitor://localhost` receives native CORS access.
+- `tests/release-policy.test.ts` locks CSP, Permissions-Policy, COOP, CORP, and
+  immutable asset caching into the deployment artifact.
 
-Pace Trail is a finished local-first rehearsal PWA and Capacitor 6 iOS app.
-The main workflow is: choose or calibrate a pace band, grant microphone access,
-practice without watching the display, receive a native haptic cue after
-sustained fast speech, stop, and review the private session trail.
+## Verification evidence — 2026-08-28
 
-The app includes:
+Clean/local gates:
 
-- an on-device energy-pulse pace estimator with no recording, transcription,
-  server audio, or retained audio frames;
-- 20-second baseline calibration, target range controls, live quiet/slow/
-  steady/fast states, cooldown-aware haptics, and clear microphone recovery;
-- derived one-second session samples in IndexedDB, result summaries, accessible
-  chart alternatives, unlimited JSON/CSV export, JSON import, and clear-all;
-- genuinely useful free pacing with a $7 Full Trail one-time unlock for more
-  than three visible sessions and two alternate patterns;
-- checkout, returned-license capture, once-daily verify caching, offline-first
-  optimistic unlock, revoked-license handling, and paste-to-restore against the
-  Sociobot billing contract (pilot API by default in staging);
-- installable PWA manifest, icon and splash assets, versioned app-shell service
-  worker, offline fallback, update notice, network state, and independent
-  `/privacy/` and `/terms/` routes;
-- topographic-cartography light/dark design, original generated paper-relief
-  hero art, deterministic product icon, safe-area layouts, 390 px treatment,
-  designed focus, semantic HTML, and reduced-motion behavior;
-- Capacitor iOS identifier `in.sociobot.haptic_speaking_pacer`, native Haptics,
-  iOS microphone usage disclosure, custom native icon/splash, and version
-  `0.1.0` (build 1);
-- macOS GitHub Actions workflow that tests/builds/syncs, archives with
-  `CODE_SIGNING_ALLOWED=NO`, makes and validates
-  `haptic-speaking-pacer-unsigned.ipa`, writes `SHA256SUMS`, and attaches files
-  to release `v0.1.0`. A signed path is conditionally available.
+- `npm ci`: clean install of 157 packages completed. The full development
+  tree reports 7 transitive advisories (3 moderate, 2 high, 2 critical);
+  `npm audit --omit=dev` reports **0** production vulnerabilities.
+- `npm test`: **10/10 passed** across 4 files.
+- `npm run build`: strict `tsc --noEmit` and Vite production build passed;
+  `dist/index.html` is present.
+- `npm run test:e2e`: **6/6 passed** on Playwright 1.58.2 Chromium, including
+  exact import regressions, license restore, keyboard skip-link focus, light
+  and dark Axe checks, legal routes, persistence, offline reload, and denied
+  microphone recovery.
+- `npm run cap:sync`: passed; the Linux worker correctly skipped CocoaPods and
+  Xcode, which run in the macOS workflow.
+- `/opt/fleet/lib/verify-url.sh` against local preview: HTTP 200, 644 ms load,
+  no console/page errors, title and `lang=en`, exactly one h1/main, zero missing
+  image alts, and zero unnamed buttons.
+- Local Lighthouse 13.4.1 mobile: Performance 100, Accessibility 100, Best
+  Practices 100, SEO 92; LCP 1,585 ms, CLS 0, TBT 0 ms.
 
-## How to run and verify
+Live gates:
+
+- Live `index.html` and hashed JS exactly match local `dist/`:
+  `4518a4286adb5bca497986027e1946e2fbd90256da96ce8420b78277f4f8632e`
+  and
+  `48fae909b941141b2ae9beeb3f19751933ef9abc6444e379eae1f46aa36a4c67`.
+- `/opt/fleet/lib/verify-url.sh`: HTTP 200, 825 ms load, no console/page
+  errors, valid title/lang/main/h1/alt/button checks. The live Playwright suite
+  also passed **6/6** at 390 px, including a real service-worker offline reload.
+- Desktop Chromium at 1440×900: one h1/main, no horizontal overflow, no console
+  or page errors, and zero initial third-party requests. Desktop Axe found zero
+  serious/critical violations; mobile light and dark Axe checks also found zero.
+- Live Lighthouse 13.4.1 mobile: Performance 100, Accessibility 100, Best
+  Practices 100, SEO 100; LCP 1,224 ms, CLS 0, TBT 0 ms.
+- Live HTML sends `Content-Security-Policy`, `Permissions-Policy`,
+  `Cross-Origin-Opener-Policy: same-origin`, and
+  `Cross-Origin-Resource-Policy: same-origin`; hashed JS sends
+  `Cache-Control: public, max-age=31536000, immutable`.
+- A fresh 100-request burst with concurrency 10 against the deployed
+  verification gateway returned **20 × 200 and 80 × 429**. All 429 responses
+  included `Retry-After` (sample: 59 seconds); verification responses were
+  `no-store`. The native origin received its exact CORS header; an unrelated
+  origin did not.
+- Production assets remain below budget: application JS 45.98 KB plus 0.94 KB
+  bridge JS, CSS 16.31 KB, mobile hero 37.67 KB, desktop hero 95.34 KB, and no
+  downloaded fonts.
+
+## iOS release evidence
+
+- Tagged GitHub Actions run
+  [33157129721](https://github.com/B-Divyesh/sf-haptic-speaking-pacer/actions/runs/33157129721)
+  completed successfully on `macos-latest` at source `48b6d71`.
+- Release [`v0.1.0`](https://github.com/B-Divyesh/sf-haptic-speaking-pacer/releases/tag/v0.1.0)
+  contains `haptic-speaking-pacer-unsigned.ipa` and `SHA256SUMS`; both stable
+  `releases/latest/download/...` URLs resolve with HTTP 200.
+- The independently downloaded IPA is **2,623,969 bytes**, `unzip -t` reports
+  no errors, and its published checksum verifies:
+  `a3fadc8f1ee3fb3160b3a88b210042eeb1b474e2b0ab445259f7665d3b9fcbda`.
+- Extracted `Payload/App.app/Info.plist` contains bundle identifier
+  `in.sociobot.haptic_speaking_pacer`, version `0.1.0`, package type `APPL`, and
+  the microphone-purpose disclosure. The IPA is intentionally unsigned.
+
+## Run and deploy
 
 ```sh
 npm ci
 npm test
 npm run build
 npm run test:e2e
+npm run cap:sync
+PLAYWRIGHT_BASE_URL=https://haptic-speaking-pacer.sociobot.in npm run test:e2e
 ```
 
-Deploy command: `npm run build`
+Deploy `dist/` together with `api/` using the work order’s Azure Static Web
+Apps deployment. The release workflow runs on `macos-latest` for `v*` tags and
+manual dispatches.
 
-Deploy root: `dist/` (`dist/index.html` exists at that exact root)
+## Needs operator action / known constraints
 
-iOS sync command: `npm run cap:sync`
-
-Verification completed on 2026-08-28:
-
-- `npm test`: 4/4 unit tests pass (classification, session summary, calibrated
-  target boundaries, CSV ownership export).
-- `npm run build`: passes TypeScript strict checking and Vite production build.
-- `npm run test:e2e`: 4/4 Playwright 1.58.2 Chromium tests pass, including
-  390×844, light and dark Axe scans, skip-link keyboard focus, legal routes,
-  settings persistence, offline service-worker reload, and denied-microphone
-  recovery.
-- `/opt/fleet/lib/verify-url.sh`: HTTP 200, load 538 ms on the local preview,
-  no console/page errors, title present, `lang=en`, exactly one h1, main
-  landmark present, zero missing image alts, and zero unlabeled buttons.
-- Lighthouse 12.2.1 mobile/local preview: Performance 100, Accessibility 100,
-  Best Practices 100, SEO 92; LCP 1.6 s, CLS 0, TBT 0 ms. Lighthouse 12 no
-  longer emits a PWA category.
-- Production assets: 42.7 KB application JS + 0.94 KB native web bridge JS,
-  16.3 KB CSS, 37.7 KB mobile hero WebP, 95.3 KB desktop hero WebP. No font
-  download. All are below the 200/50/120/300 KB budgets.
-- `npm audit --omit=dev`: zero runtime vulnerabilities.
-- Native plist and Xcode project were inspected locally: identifier is correct,
-  marketing version is 0.1.0, build is 1, and the microphone purpose string is
-  present. The IPA intentionally is not produced in this Linux worker; the
-  workflow validates >1 MB, unzips it, and checks `CFBundleIdentifier` on macOS.
-
-## Needs operator action
-
-1. Register `haptic-speaking-pacer` with the Sociobot billing factory. For the
-   production static build set
-   `VITE_BILLING_API_BASE=https://api.sociobot.in/api/v1`; staging intentionally
-   defaults to `https://pilot-api.sociobot.in/api/v1`.
-2. Push tag `v0.1.0` (or manually dispatch “Build iOS IPA”) so GitHub Actions
-   creates the release assets. Confirm the landing-page latest-release link and
-   `SHA256SUMS` after the first successful run.
-3. Unsigned output needs no Apple secrets and can be installed with AltStore,
-   Sideloadly, or Xcode. To enable the workflow’s signed App Store Connect path,
-   add exactly these GitHub Actions secrets:
-   - `APPLE_TEAM_ID`
-   - `APPLE_CERTIFICATE_BASE64` (Apple Distribution `.p12`, base64 encoded)
-   - `APPLE_CERTIFICATE_PASSWORD`
-   - `APPLE_PROVISIONING_PROFILE_BASE64` (distribution `.mobileprovision`,
-     base64 encoded for `in.sociobot.haptic_speaking_pacer`)
-   - `APPLE_PROVISIONING_PROFILE_NAME` (profile name, not UUID)
-   - `APPLE_KEYCHAIN_PASSWORD` (ephemeral CI keychain password)
-4. App Store/TestFlight submission, review metadata, privacy nutrition labels,
-   and final distribution signing require the owner’s Apple Developer account.
-
-## Known gaps and honest constraints
-
+- The published IPA is unsigned and needs AltStore, Sideloadly, or Xcode. App
+  Store/TestFlight delivery requires the owner’s Apple Developer account.
+- To enable the signed path, configure exactly `APPLE_TEAM_ID`,
+  `APPLE_CERTIFICATE_BASE64`, `APPLE_CERTIFICATE_PASSWORD`,
+  `APPLE_PROVISIONING_PROFILE_BASE64`, `APPLE_PROVISIONING_PROFILE_NAME`, and
+  `APPLE_KEYCHAIN_PASSWORD`.
 - Capacitor provides an iPhone companion, not a WatchKit target. Haptics occur
-  on the iPhone (including while held or pocketed); browser vibration depends
-  on browser/device support. A standalone Apple Watch target and phone/watch
-  relay are the clearest v1.1 extension, but were not implied by the mandated
-  Capacitor-only stack and cannot be claimed here.
-- Estimated WPM is intentionally approximate. It infers syllable-like vocal
-  energy pulses and cannot distinguish overlapping speakers or reliably work
-  in loud rooms. The product makes this limitation visible before and after a
-  session and does not position itself as clinical assessment.
-- The release download cannot exist until the operator runs the macOS workflow.
-  The app points at the stable `releases/latest/download/...` URL that will
-  resolve after that release is created.
-- A real-device pass remains advisable for microphone sensitivity across phone
-  models and the subjective strength of all three native haptic patterns.
+  on the iPhone; a standalone Apple Watch target/relay remains a future native
+  extension. Estimated WPM remains intentionally approximate, as disclosed.
+- A real-device microphone-sensitivity and subjective haptic-strength pass is
+  still advisable across phone models. No automated or desktop check can
+  replace that hardware QA.
 
-## Source and asset provenance
+## Source and provenance
 
-The generated hero source, factory sidecar, exact prompt, review, visual tokens,
-and licensing notes are in `assets/src/` and `.factory/design.md`. The shipped
-WebPs are optimized derivatives. All icons and contour charts were authored for
-this product. No third-party fonts, stock assets, runtime CDNs, or analytics are
-used.
+The original generated hero source, prompt, review, licensing, visual tokens,
+and motion rules remain documented in `assets/src/` and
+`.factory/design.md`. No new imagery was needed for this repair. There are no
+third-party fonts, runtime scripts, analytics, or stock assets.
