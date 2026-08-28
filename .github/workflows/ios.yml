@@ -37,7 +37,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/unsigned/Payload"
           cp -R "$RUNNER_TEMP/App-unsigned.xcarchive/Products/Applications/App.app" "$RUNNER_TEMP/unsigned/Payload/"
           cd "$RUNNER_TEMP/unsigned"
-          zip -qry "$GITHUB_WORKSPACE/haptic-speaking-pacer-unsigned.ipa" Payload
+          # Store without compression: iOS accepts this standard ZIP form and
+          # it keeps the independently verifiable package above the 1 MB floor.
+          zip -0qry "$GITHUB_WORKSPACE/haptic-speaking-pacer-unsigned.ipa" Payload
       - name: Validate unsigned package
         run: |
           set -euo pipefail
