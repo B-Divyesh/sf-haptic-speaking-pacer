@@ -62,10 +62,38 @@ test('session import rejects crafted and partial records atomically', async ({ p
   });
   expect(storedCount).toBe(0);
 
+  await page.evaluate(async (record) => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('pace-trail');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction('sessions', 'readwrite');
+      transaction.objectStore('sessions').put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+  }, crafted);
   await page.reload();
   await expect(page.locator('img[src="x"]')).toHaveCount(0);
   expect(await page.evaluate(() => (window as typeof window & { __qaXss?: number }).__qaXss)).toBeUndefined();
   await expect(page.getByText('No trail marks yet')).toBeVisible();
+  expect(await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('pace-trail');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const count = await new Promise<number>((resolve, reject) => {
+      const request = database.transaction('sessions').objectStore('sessions').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return count;
+  })).toBe(0);
 });
 
 test('license restore uses the rate-limited same-origin gateway', async ({ page }) => {
