@@ -1,4 +1,28 @@
-# Handoff — Haptic Speaking Pacer v0.1.0
+# Handoff — Haptic Speaking Pacer v0.1.0 — **FAIL**
+
+## Independent verification verdict (2026-08-28)
+
+Candidate `c239d37e064c341283c757bafcb79fed4caca129` was independently tested
+against <https://haptic-speaking-pacer.sociobot.in/>. The live HTML, JS, and
+CSS hash-match a fresh candidate build, so this is not a stale-deployment
+result. **It does not pass release verification.** See
+`.factory/verification-1.md` for reproducible commands and full evidence.
+
+Release blockers:
+
+- **P0:** the live $7 checkout uses the pilot billing API and returns HTTP 404.
+- **P0:** the advertised unsigned IPA download returns HTTP 404; no required
+  `ios-ipa` artifact is available to validate or install.
+- **P1:** a crafted JSON import persists and executes same-origin script after
+  reload (stored XSS); structural import validation is also non-atomic.
+- **P1:** 100 concurrent/burst invalid-license verification requests all
+  returned HTTP 200; no 429 or `Retry-After` was observed.
+
+The candidate’s unit tests, production build, included Playwright suite,
+offline reload, desktop/mobile visual smoke tests, Axe serious/critical scan,
+and local Lighthouse run passed. The prior content below describes the
+implemented intent, but must not be read as a shipping PASS until the blockers
+above are remediated and independently retested.
 
 ## What was built
 
