@@ -1,0 +1,11 @@
+{
+  "slug": "haptic-speaking-pacer",
+  "title": "Haptic Speaking Pacer",
+  "territory": "utilities",
+  "user": "A presenter, teacher, or person practicing clear speech who needs a discreet tactile cue when their pace drifts too fast, without watching a screen.",
+  "smallest_useful_product": "A watch companion that learns a baseline from a short practice sample, detects only speech activity/estimated words-per-minute, and sends configurable haptic nudges with a post-session private chart.",
+  "success_measure": "In three rehearsed talks, a user stays within their selected pace band for 70% of speaking time without looking at a display.",
+  "artifact_class": "ios-ipa",
+  "monetization": "one-time",
+  "constraints": "On-device processing only; battery and microphone permission disclosure; pace estimates are approximate and not clinical speech assessment."
+}
