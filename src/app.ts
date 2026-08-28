@@ -2,10 +2,12 @@ import './styles.css';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { AudioPacer } from './audio';
 import { classifyPace, csvForSessions, sessionSummary, suggestedBand, type PaceSample, type SessionRecord } from './pace';
+import { sessionsFromImport } from './session-schema';
 import { clearSessions, getSessions, importSessions, saveSession } from './storage';
 
 const PRODUCT_SLUG = 'haptic-speaking-pacer';
-const API_BASE = import.meta.env.VITE_BILLING_API_BASE || 'https://pilot-api.sociobot.in/api/v1';
+const CHECKOUT_API_BASE = import.meta.env.VITE_BILLING_API_BASE || 'https://api.sociobot.in/api/v1';
+const VERIFY_URL = location.protocol === 'capacitor:' ? 'https://haptic-speaking-pacer.sociobot.in/api/license/verify' : '/api/license/verify';
 const LICENSE_KEY = `sb_license:${PRODUCT_SLUG}`;
 const VERDICT_KEY = `${LICENSE_KEY}:verdict`;
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -138,7 +140,7 @@ function renderHome(): void {
       <section class="unlock-section" aria-labelledby="unlock-title">
         <div><p class="eyebrow">One-time unlock</p><h2 id="unlock-title">Keep the whole trail</h2><p>For $7 once, see unlimited session history and choose alternate haptic patterns. Calibration, custom targets, the core pacer, and data export stay free.</p></div>
         <div class="unlock-actions">
-          ${licenseActive ? '<p class="license-active"><span aria-hidden="true">✓</span> Full trail unlocked on this device.</p>' : `<a class="button primary" href="${API_BASE}/products/${PRODUCT_SLUG}/checkout">Buy once — $7</a>`}
+          ${licenseActive ? '<p class="license-active"><span aria-hidden="true">✓</span> Full trail unlocked on this device.</p>' : `<a class="button primary" href="${CHECKOUT_API_BASE}/products/${PRODUCT_SLUG}/checkout">Buy once — $7</a>`}
           <button class="text-button" id="restore-license" type="button">Have a license? Restore it</button>
         </div>
       </section>
@@ -147,7 +149,7 @@ function renderHome(): void {
         <p class="eyebrow">Carry it with you</p><h2 id="install-title">Install Pace Trail</h2>
         <div class="install-grid">
           <div><h3>Install the PWA</h3><p>Works offline after the first visit. On iPhone, use Share → Add to Home Screen.</p><button class="button secondary" id="install-pwa" type="button">Install web app</button></div>
-          <div><h3>Sideload the iPhone app</h3><p>The release IPA is unsigned. Install it with AltStore, Sideloadly, or Xcode; it is not yet on the App Store or TestFlight.</p><a class="button secondary" href="https://github.com/B-Divyesh/sf-haptic-speaking-pacer/releases/latest/download/haptic-speaking-pacer-unsigned.ipa">Download unsigned IPA</a></div>
+          <div><h3>Sideload the iPhone app</h3><p>Download the unsigned IPA, verify its <a href="https://github.com/B-Divyesh/sf-haptic-speaking-pacer/releases/latest/download/SHA256SUMS">SHA-256 checksum</a>, then install it with AltStore, Sideloadly, or Xcode. App Store or TestFlight distribution needs the owner’s Apple Developer account.</p><a class="button secondary" href="https://github.com/B-Divyesh/sf-haptic-speaking-pacer/releases/latest/download/haptic-speaking-pacer-unsigned.ipa">Download unsigned IPA</a></div>
         </div>
       </section>
     </main>
@@ -178,7 +180,7 @@ function renderSessions(items: SessionRecord[]): string {
   if (!items.length) return `<div class="empty-state"><span class="empty-contour" aria-hidden="true"></span><h3>No trail marks yet</h3><p>Complete a practice and your first private pace map will appear here.</p><button class="button secondary" type="button" data-start>Start the first practice</button></div>`;
   return `<ol class="session-list">${items.map((session) => {
     const date = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(session.startedAt));
-    return `<li><div class="session-summary"><div><time datetime="${session.startedAt}">${escapeHtml(date)}</time><strong>${session.inBandPercent}% in range</strong></div><div><span>${session.averageWpm} avg WPM</span><span>${formatDuration(session.durationSeconds)}</span></div></div>${sparkline(session)}<details><summary>View accessible pace samples</summary><p>Target ${session.targetLow}–${session.targetHigh} WPM. ${session.inBandPercent}% of speaking samples were in range.</p><table><thead><tr><th>Time</th><th>Pace</th><th>State</th></tr></thead><tbody>${session.samples.filter((_, i) => i % 5 === 0).map((sample) => `<tr><td>${sample.at}s</td><td>${sample.wpm || '—'}</td><td>${sample.state}</td></tr>`).join('')}</tbody></table></details></li>`;
+    return `<li><div class="session-summary"><div><time datetime="${escapeHtml(session.startedAt)}">${escapeHtml(date)}</time><strong>${escapeHtml(String(session.inBandPercent))}% in range</strong></div><div><span>${escapeHtml(String(session.averageWpm))} avg WPM</span><span>${escapeHtml(formatDuration(session.durationSeconds))}</span></div></div>${sparkline(session)}<details><summary>View accessible pace samples</summary><p>Target ${escapeHtml(String(session.targetLow))}–${escapeHtml(String(session.targetHigh))} WPM. ${escapeHtml(String(session.inBandPercent))}% of speaking samples were in range.</p><table><thead><tr><th>Time</th><th>Pace</th><th>State</th></tr></thead><tbody>${session.samples.filter((_, i) => i % 5 === 0).map((sample) => `<tr><td>${escapeHtml(String(sample.at))}s</td><td>${escapeHtml(sample.wpm ? String(sample.wpm) : '—')}</td><td>${escapeHtml(sample.state)}</td></tr>`).join('')}</tbody></table></details></li>`;
   }).join('')}</ol>`;
 }
 
@@ -371,8 +373,8 @@ function downloadFile(content: string, filename: string, type: string): void {
 async function handleImport(event: Event): Promise<void> {
   const file = (event.target as HTMLInputElement).files?.[0]; if (!file) return;
   try {
-    const parsed = JSON.parse(await file.text()) as { sessions?: SessionRecord[] } | SessionRecord[];
-    const imported = await importSessions(Array.isArray(parsed) ? parsed : parsed.sessions ?? []);
+    const parsed: unknown = JSON.parse(await file.text());
+    const imported = await importSessions(sessionsFromImport(parsed));
     sessions = await getSessions(); renderHome(); showToast(`Imported ${imported} session${imported === 1 ? '' : 's'}.`);
   } catch { showToast('That file is not a valid Pace Trail export.'); }
 }
@@ -396,7 +398,7 @@ async function verifyLicense(token: string, force = false): Promise<boolean> {
   try { cached = JSON.parse(localStorage.getItem(VERDICT_KEY) ?? 'null') as CachedVerdict | null; } catch { /* reverify */ }
   if (!force && cached && Date.now() - cached.checkedAt < 86_400_000) return cached.valid;
   try {
-    const response = await fetch(`${API_BASE}/products/${PRODUCT_SLUG}/verify?license=${encodeURIComponent(token)}`);
+    const response = await fetch(`${VERIFY_URL}?license=${encodeURIComponent(token)}`, { cache: 'no-store', headers: { Accept: 'application/json' } });
     if (!response.ok) throw new Error('Verification unavailable');
     const result = await response.json() as { valid: boolean };
     const verdict = { valid: result.valid, checkedAt: Date.now() };
@@ -427,7 +429,7 @@ function closeDialog(id: string): void { document.querySelector<HTMLDialogElemen
 function showToast(message: string): void { const toast = document.querySelector<HTMLElement>('#toast'); if (!toast) return; toast.textContent = message; toast.hidden = false; setTimeout(() => { toast.hidden = true; }, 4500); }
 
 function legalPage(kind: 'privacy' | 'terms'): string {
-  const privacy = `<main id="main" class="legal-page"><p class="eyebrow">Policy · effective 28 August 2026</p><h1>Privacy, without fine print</h1><p class="lede">Pace Trail is designed so your voice never becomes our data.</p><h2>What the app processes</h2><p>When you start a calibration or practice, the app requests microphone access and calculates short-lived audio energy measurements on your device. Raw audio is not recorded, transcribed, uploaded, or retained. The app stores derived pace samples, your target band, preferences, and session summaries locally in your browser or app storage.</p><h2>What leaves your device</h2><p>Nothing during free use. We do not use analytics, advertising pixels, third-party fonts, cookies, or tracking scripts. If you buy or verify a license, your browser contacts the Sociobot billing API with the license token. Sociobot/Dodo is the merchant of record and handles payment information under its own policy; this app never receives card details.</p><h2>Your control</h2><p>Use Export data to download JSON and CSV copies. Use Clear session data to remove all practice history from this device. Removing the app or clearing site data also removes local data and the saved license token.</p><h2>Permissions and battery</h2><p>The microphone runs only while a calibration or practice is visibly active. Continuous audio processing can use additional battery. Closing or stopping the session releases the microphone.</p><h2>Contact</h2><p>Questions can be opened in the project’s <a href="https://github.com/B-Divyesh/sf-haptic-speaking-pacer/issues">public issue tracker</a>.</p></main>`;
+  const privacy = `<main id="main" class="legal-page"><p class="eyebrow">Policy · effective 28 August 2026</p><h1>Privacy, without fine print</h1><p class="lede">Pace Trail is designed so your voice never becomes our data.</p><h2>What the app processes</h2><p>When you start a calibration or practice, the app requests microphone access and calculates short-lived audio energy measurements on your device. Raw audio is not recorded, transcribed, uploaded, or retained. The app stores derived pace samples, your target band, preferences, and session summaries locally in your browser or app storage.</p><h2>What leaves your device</h2><p>Nothing during free use. We do not use analytics, advertising pixels, third-party fonts, cookies, or tracking scripts. If you buy or verify a license, the license token passes through this app’s rate-limited verification endpoint to the Sociobot billing API. It is not stored by the endpoint. Sociobot/Dodo is the merchant of record and handles payment information under its own policy; this app never receives card details.</p><h2>Your control</h2><p>Use Export data to download JSON and CSV copies. Use Clear session data to remove all practice history from this device. Removing the app or clearing site data also removes local data and the saved license token.</p><h2>Permissions and battery</h2><p>The microphone runs only while a calibration or practice is visibly active. Continuous audio processing can use additional battery. Closing or stopping the session releases the microphone.</p><h2>Contact</h2><p>Questions can be opened in the project’s <a href="https://github.com/B-Divyesh/sf-haptic-speaking-pacer/issues">public issue tracker</a>.</p></main>`;
   const terms = `<main id="main" class="legal-page"><p class="eyebrow">Terms · effective 28 August 2026</p><h1>Terms of use</h1><p class="lede">Pace Trail is a personal rehearsal aid, offered as-is.</p><h2>Appropriate use</h2><p>Use the app to practice your own speaking pace. Do not use it to monitor participants, make employment or educational decisions, diagnose a condition, or replace professional speech or medical advice. Pace estimates are approximate and can be affected by background sound, microphone placement, accent, and pauses.</p><h2>Purchase and license</h2><p>The $7 Full Trail unlock is a one-time purchase for unlimited history views and alternate haptic patterns. Core pacing, custom targets, calibration, accessibility, safety notices, and export remain free. Sociobot/Dodo is the merchant of record. Checkout, receipts, and refunds are handled there; a refund revokes the related license. A license is for personal use and may be restored on your devices.</p><h2>Availability</h2><p>The app may change or be unavailable. Offline use requires one successful initial load. Browser and device restrictions can limit microphone or haptic behavior. The unsigned IPA requires your own sideloading/signing method and may need periodic re-signing.</p><h2>Warranty and liability</h2><p>To the extent permitted by law, the software is provided without warranties. The authors are not liable for indirect or consequential loss arising from use of the app.</p><h2>Privacy</h2><p>See the <a href="/privacy/">privacy policy</a> for the clear description of local processing and billing verification.</p></main>`;
   return shell(kind === 'privacy' ? privacy : terms, kind);
 }

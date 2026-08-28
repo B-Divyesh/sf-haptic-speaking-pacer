@@ -12,6 +12,8 @@ permissions:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      HAS_APPLE_SIGNING: ${{ secrets.APPLE_TEAM_ID != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,7 +46,7 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$RUNNER_TEMP/Info.plist")" = "in.sociobot.haptic_speaking_pacer"
           shasum -a 256 haptic-speaking-pacer-unsigned.ipa > SHA256SUMS
       - name: Import Apple signing credentials
-        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        if: env.HAS_APPLE_SIGNING == 'true'
         env:
           CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -66,7 +68,7 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/pace-trail.mobileprovision"
       - name: Build signed IPA when operator secrets exist
-        if: ${{ secrets.APPLE_TEAM_ID != '' }}
+        if: env.HAS_APPLE_SIGNING == 'true'
         env:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           PROFILE_NAME: ${{ secrets.APPLE_PROVISIONING_PROFILE_NAME }}

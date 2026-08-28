@@ -71,9 +71,10 @@ The topographic visual rationale and generated-art provenance are in
 `.factory/design.md`. Factory verification and known limitations are in
 `.factory/handoff.md`.
 
-Staging builds default to `https://pilot-api.sociobot.in/api/v1`. Set
-`VITE_BILLING_API_BASE=https://api.sociobot.in/api/v1` for the production
-factory build after the product is registered.
+Production checkout uses the registered Sociobot billing product. License
+verification goes through the same-origin managed API, which applies a
+20-request-per-minute client limit before forwarding to Sociobot. A staging
+checkout can be selected explicitly with `VITE_BILLING_API_BASE`.
 
 ## Deploy
 

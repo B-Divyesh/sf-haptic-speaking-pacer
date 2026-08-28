@@ -1,4 +1,5 @@
 import type { SessionRecord } from './pace';
+import { isSessionRecord, validateSessionRecords } from './session-schema';
 
 const DB_NAME = 'pace-trail';
 const DB_VERSION = 1;
@@ -30,18 +31,36 @@ export async function saveSession(session: SessionRecord): Promise<void> {
 export async function getSessions(): Promise<SessionRecord[]> {
   const db = await openDatabase();
   const sessions = await new Promise<SessionRecord[]>((resolve, reject) => {
-    const request = db.transaction(SESSION_STORE, 'readonly').objectStore(SESSION_STORE).getAll();
-    request.onsuccess = () => resolve(request.result as SessionRecord[]);
-    request.onerror = () => reject(request.error ?? new Error('Could not read session history.'));
+    const valid: SessionRecord[] = [];
+    const transaction = db.transaction(SESSION_STORE, 'readwrite');
+    const request = transaction.objectStore(SESSION_STORE).openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      if (isSessionRecord(cursor.value)) valid.push(cursor.value);
+      else cursor.delete();
+      cursor.continue();
+    };
+    transaction.oncomplete = () => resolve(valid);
+    transaction.onerror = () => reject(transaction.error ?? new Error('Could not read session history.'));
   });
   db.close();
   return sessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 }
 
-export async function importSessions(sessions: SessionRecord[]): Promise<number> {
-  const valid = sessions.filter((s) => s && typeof s.id === 'string' && Array.isArray(s.samples));
-  for (const session of valid) await saveSession(session);
-  return valid.length;
+export async function importSessions(value: unknown): Promise<number> {
+  const sessions = validateSessionRecords(value);
+  const db = await openDatabase();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(SESSION_STORE, 'readwrite');
+    const store = transaction.objectStore(SESSION_STORE);
+    sessions.forEach((session) => store.put(session));
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(transaction.error ?? new Error('Could not import session history.'));
+    transaction.onerror = () => reject(transaction.error ?? new Error('Could not import session history.'));
+  });
+  db.close();
+  return sessions.length;
 }
 
 export async function clearSessions(): Promise<void> {

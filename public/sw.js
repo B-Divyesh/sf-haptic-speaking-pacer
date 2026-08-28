@@ -1,4 +1,4 @@
-const VERSION = 'pace-trail-v1';
+const VERSION = 'pace-trail-v2';
 const APP_SHELL = [
   '/', '/privacy/', '/terms/', '/offline.html', '/manifest.webmanifest',
   '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png',
@@ -25,6 +25,10 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(request));
+    return;
+  }
   if (request.mode === 'navigate') {
     event.respondWith(fetch(request).then((response) => {
       const copy = response.clone(); caches.open(VERSION).then((cache) => cache.put(request, copy)); return response;

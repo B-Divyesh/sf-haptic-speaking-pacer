@@ -8,6 +8,7 @@ test('home is accessible and responsive at 390px', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Find a pace');
   await expect(page.getByRole('button', { name: 'Start a practice' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Buy once — $7' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/haptic-speaking-pacer/checkout');
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
   await page.keyboard.press('Tab');
@@ -15,6 +16,78 @@ test('home is accessible and responsive at 390px', async ({ page }) => {
   await page.getByRole('button', { name: 'Switch color theme' }).click();
   const darkResults = await new AxeBuilder({ page }).analyze();
   expect(darkResults.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
+});
+
+test('session import rejects crafted and partial records atomically', async ({ page }) => {
+  await page.goto('/');
+  const validSession = {
+    id: 'valid-session',
+    startedAt: '2026-08-28T08:00:00.000Z',
+    durationSeconds: 30,
+    targetLow: 120,
+    targetHigh: 150,
+    inBandPercent: 0,
+    averageWpm: 0,
+    samples: [],
+  };
+  const crafted = { ...validSession, id: 'crafted-session', averageWpm: '<img src=x onerror="window.__qaXss=1">' };
+
+  await page.locator('#import-file').setInputFiles({
+    name: 'crafted.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ sessions: [crafted] })),
+  });
+  await expect(page.locator('#toast')).toContainText('not a valid Pace Trail export');
+
+  await page.locator('#import-file').setInputFiles({
+    name: 'mixed.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify({ sessions: [validSession, { id: 'only-id-and-samples', samples: [] }] })),
+  });
+  await expect(page.locator('#toast')).toContainText('not a valid Pace Trail export');
+
+  const storedCount = await page.evaluate(async () => {
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open('pace-trail');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    const count = await new Promise<number>((resolve, reject) => {
+      const request = database.transaction('sessions').objectStore('sessions').count();
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return count;
+  });
+  expect(storedCount).toBe(0);
+
+  await page.reload();
+  await expect(page.locator('img[src="x"]')).toHaveCount(0);
+  expect(await page.evaluate(() => (window as typeof window & { __qaXss?: number }).__qaXss)).toBeUndefined();
+  await expect(page.getByText('No trail marks yet')).toBeVisible();
+});
+
+test('license restore uses the rate-limited same-origin gateway', async ({ page }) => {
+  await page.addInitScript(() => {
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(input instanceof Request ? input.url : String(input), location.href);
+      if (url.pathname === '/api/license/verify' && url.searchParams.get('license') === 'restored-token') {
+        return Promise.resolve(new Response(JSON.stringify({ valid: true, reason: 'ok', expires_at: null }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }));
+      }
+      return nativeFetch(input, init);
+    }) as typeof window.fetch;
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Have a license? Restore it' }).click();
+  await page.getByLabel('License token').fill('restored-token');
+  await page.getByRole('button', { name: 'Verify license' }).click();
+  await expect(page.getByText('Full trail unlocked on this device.')).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('sb_license:haptic-speaking-pacer'))).toBe('restored-token');
 });
 
 test('settings survive refresh and legal pages have one main heading', async ({ page }) => {
