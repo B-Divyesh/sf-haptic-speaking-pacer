@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Contour waypoint">
+  <rect width="512" height="512" rx="112" fill="#f1ecdd"/>
+  <g fill="none" stroke="#172b28" stroke-width="17">
+    <path d="M64 293c34-83 70-148 143-166 76-19 96 58 161 57 35-1 60-18 80-39"/>
+    <path d="M60 347c49-99 101-160 166-167 71-8 88 57 147 57 33 0 58-14 82-31" opacity=".72"/>
+    <path d="M84 399c55-90 111-139 172-141 60-2 76 43 124 43 30 0 53-11 72-26" opacity=".42"/>
+  </g>
+  <circle cx="300" cy="214" r="45" fill="#176b52" stroke="#172b28" stroke-width="13"/>
+  <circle cx="300" cy="214" r="76" fill="none" stroke="#a34f12" stroke-width="9" opacity=".7"/>
+</svg>
