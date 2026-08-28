@@ -40,7 +40,9 @@ npm run test:e2e
 `npm run build` is the reproducible deploy command. It writes `dist/`, with
 `dist/index.html` at the required static root. End-to-end tests use the pinned
 Playwright 1.58.2 Chromium binary and cover the 390 px layout, serious/critical
-Axe findings, legal pages, settings persistence, and a real offline reload.
+Axe findings, legal pages, settings persistence, atomic import rejection, and
+a real offline reload. Run the same suite against the deployed product with
+`PLAYWRIGHT_BASE_URL=https://haptic-speaking-pacer.sociobot.in npm run test:e2e`.
 
 ## iOS
 
