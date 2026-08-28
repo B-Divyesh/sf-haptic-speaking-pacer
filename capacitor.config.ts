@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'in.sociobot.haptic_speaking_pacer',
   appName: 'Speaking Pacer',
   webDir: 'dist',
-  bundledWebRuntime: false,
   backgroundColor: '#F1ECDD',
 };
 
