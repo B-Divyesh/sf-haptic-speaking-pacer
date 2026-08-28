@@ -5,7 +5,7 @@ import { classifyPace, csvForSessions, sessionSummary, suggestedBand, type PaceS
 import { clearSessions, getSessions, importSessions, saveSession } from './storage';
 
 const PRODUCT_SLUG = 'haptic-speaking-pacer';
-const API_BASE = 'https://api.sociobot.in/api/v1';
+const API_BASE = import.meta.env.VITE_BILLING_API_BASE || 'https://pilot-api.sociobot.in/api/v1';
 const LICENSE_KEY = `sb_license:${PRODUCT_SLUG}`;
 const VERDICT_KEY = `${LICENSE_KEY}:verdict`;
 const app = document.querySelector<HTMLDivElement>('#app')!;

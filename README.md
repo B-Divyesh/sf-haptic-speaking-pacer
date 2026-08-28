@@ -71,6 +71,10 @@ The topographic visual rationale and generated-art provenance are in
 `.factory/design.md`. Factory verification and known limitations are in
 `.factory/handoff.md`.
 
+Staging builds default to `https://pilot-api.sociobot.in/api/v1`. Set
+`VITE_BILLING_API_BASE=https://api.sociobot.in/api/v1` for the production
+factory build after the product is registered.
+
 ## Deploy
 
 Deploy the contents of `dist/` as a static site with independent routes for
