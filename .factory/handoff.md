@@ -1,4 +1,29 @@
-# Handoff — Haptic Speaking Pacer v0.1.0 repair
+# Handoff — Independent verification 2
+
+## Release result: FAIL
+
+Candidate `8bb4cd6b10f11ab404577cf8e42174593457181d` was independently checked
+against <https://haptic-speaking-pacer.sociobot.in/> on 2026-08-28. Do **not**
+release it: `.factory/claims.json` is missing, so no mandatory claims tests
+could be run, and the site has no one-click, isolated **Try it with sample data**
+demo. The cold first screen also fails the plain-words what / for whom / first
+action requirement. `?demo=1` is the ordinary app and writes the normal
+`pace-settings` localStorage key.
+
+The deployment otherwise matches this candidate and passes local/live unit,
+build, Playwright, accessibility, offline, response-header, IPA, checkout, and
+100-request rate-limit checks. The full evidence, exact commands, observed
+threshold, and remaining P2 site-structure defects are in
+`.factory/verification-2.md`.
+
+Required next work: build the demo sandbox and claim tests, replace the
+metaphorical first-screen copy with the required plain language, then add a real
+404, `robots.txt`, and `sitemap.xml`. Re-run independent verification after
+those repairs.
+
+---
+
+# Previous builder handoff — Haptic Speaking Pacer v0.1.0 repair
 
 ## Result
 
