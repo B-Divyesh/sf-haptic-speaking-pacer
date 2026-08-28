@@ -12,7 +12,7 @@ function header(req, name) {
 
 function clientKey(req) {
   const forwarded = String(header(req, 'x-forwarded-for') || header(req, 'x-azure-clientip') || 'unknown');
-  return forwarded.split(',').map((part) => part.trim()).filter(Boolean).at(-1) || 'unknown';
+  return forwarded.split(',').map((part) => part.trim()).filter(Boolean)[0] || 'unknown';
 }
 
 function checkLimit(key, now = Date.now()) {
@@ -27,7 +27,9 @@ function checkLimit(key, now = Date.now()) {
 }
 
 async function verifyLicense(context, req) {
-  const rate = checkLimit(clientKey(req));
+  const globalRate = checkLimit('__all_clients__');
+  const clientRate = globalRate.allowed ? checkLimit(`client:${clientKey(req)}`) : globalRate;
+  const rate = clientRate;
   const origin = String(header(req, 'origin'));
   const rateHeaders = {
     'Cache-Control': 'no-store',
