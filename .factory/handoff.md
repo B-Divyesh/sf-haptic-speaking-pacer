@@ -1,5 +1,21 @@
 # Handoff — Haptic Speaking Pacer repair 2
 
+## Independent verification 3 — FAIL
+
+Verification on 2026-09-05 reviewed implementation
+`f18c61586de3a8541e40d5fbc06c4819810ab3a9` and documentation base
+`c902cd9b442e38470b8d540ef48f12f208d8f904`. The deployed artifact matches
+the fresh build and all declared commands pass, but the verifier recorded four
+P1 claim-contract findings. A fresh demo visibly exposes three sessions while
+claiming it opens four; the tests also omit alternate paid tap patterns,
+automatic sustained-fast cues, and several stated privacy behaviors. See
+`.factory/verification-3.md` for exact evidence and required repairs.
+
+The earlier checkout, IPA, import-safety, headers/cache, rate-limit,
+demo-isolation, first-screen, crawler-file, and true-404 findings are now
+verified fixed. The current release verdict is **FAIL** until the four claim
+findings are repaired and reverified.
+
 ## Release result: repaired and deployed
 
 The implementation deployed to <https://haptic-speaking-pacer.sociobot.in/> is
