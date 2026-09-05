@@ -24,6 +24,10 @@
       }
     },
     {
+      "route": "/404",
+      "statusCode": 404
+    },
+    {
       "route": "/demo/*",
       "headers": {
         "Cache-Control": "no-cache"
