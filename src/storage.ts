@@ -1,13 +1,25 @@
 import type { SessionRecord } from './pace';
 import { isSessionRecord, validateSessionRecords } from './session-schema';
 
-const DB_NAME = 'pace-trail';
+const REAL_DB_NAME = 'pace-trail';
+const DEMO_DB_NAME = 'demo:pace-trail';
 const DB_VERSION = 1;
 const SESSION_STORE = 'sessions';
 
+let databaseName = REAL_DB_NAME;
+
+/**
+ * The demo uses an entirely different IndexedDB database.  This is set before
+ * any read or write so sample records can never share a transaction with a
+ * visitor's sessions.
+ */
+export function setStorageNamespace(namespace: 'real' | 'demo'): void {
+  databaseName = namespace === 'demo' ? DEMO_DB_NAME : REAL_DB_NAME;
+}
+
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(databaseName, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(SESSION_STORE)) db.createObjectStore(SESSION_STORE, { keyPath: 'id' });

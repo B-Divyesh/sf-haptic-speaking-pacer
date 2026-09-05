@@ -1,6 +1,6 @@
-const VERSION = 'pace-trail-v2';
+const VERSION = 'pace-trail-v3';
 const APP_SHELL = [
-  '/', '/privacy/', '/terms/', '/offline.html', '/manifest.webmanifest',
+  '/', '/demo/', '/privacy/', '/terms/', '/404.html', '/offline.html', '/manifest.webmanifest',
   '/icons/icon.svg', '/icons/icon-192.png', '/icons/icon-512.png',
   '/assets/topographic-pulse-640.webp', '/assets/topographic-pulse-960.webp'
 ];

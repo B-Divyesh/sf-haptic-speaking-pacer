@@ -1,9 +1,9 @@
 {
   "name": "Haptic Speaking Pacer",
-  "short_name": "Pace Trail",
-  "description": "Private speaking pace estimates and discreet tactile cues.",
-  "id": "/?source=pwa",
-  "start_url": "/?v=1",
+  "short_name": "Speech Pacer",
+  "description": "Practice a steady speaking pace with private device cues.",
+  "id": "/?source=pwa-v3",
+  "start_url": "/?v=3",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",

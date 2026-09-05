@@ -6,7 +6,8 @@ test('home is accessible and responsive at 390px', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle(/Haptic Speaking Pacer/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Find a pace');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Practice a steady speaking pace');
+  await expect(page.getByRole('link', { name: 'Try it with sample data' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start a practice' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Buy once — $7' })).toHaveAttribute('href', 'https://api.sociobot.in/api/v1/products/haptic-speaking-pacer/checkout');
   const results = await new AxeBuilder({ page }).analyze();
@@ -79,7 +80,7 @@ test('session import rejects crafted and partial records atomically', async ({ p
   await page.reload();
   await expect(page.locator('img[src="x"]')).toHaveCount(0);
   expect(await page.evaluate(() => (window as typeof window & { __qaXss?: number }).__qaXss)).toBeUndefined();
-  await expect(page.getByText('No trail marks yet')).toBeVisible();
+  await expect(page.getByText('No practice sessions yet')).toBeVisible();
   expect(await page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open('pace-trail');
@@ -114,7 +115,7 @@ test('license restore uses the rate-limited same-origin gateway', async ({ page 
   await page.getByRole('button', { name: 'Have a license? Restore it' }).click();
   await page.getByLabel('License token').fill('restored-token');
   await page.getByRole('button', { name: 'Verify license' }).click();
-  await expect(page.getByText('Full trail unlocked on this device.')).toBeVisible();
+  await expect(page.getByText('Full session history is active on this device.')).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('sb_license:haptic-speaking-pacer'))).toBe('restored-token');
 });
 
@@ -125,9 +126,23 @@ test('settings survive refresh and legal pages have one main heading', async ({ 
   await expect(page.locator('#low-output')).toHaveText('110');
   await page.goto('/privacy/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-  await expect(page.getByRole('main')).toContainText('voice never becomes our data');
+  await expect(page.getByRole('main')).toContainText('speech audio stays on your device');
   await page.goto('/terms/');
   await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
+});
+
+test('demo, crawler files, and the designed 404 page have dedicated routes', async ({ page }) => {
+  const robots = await page.request.get('/robots.txt');
+  expect(robots.ok()).toBe(true);
+  expect(await robots.text()).toContain('Sitemap: https://haptic-speaking-pacer.sociobot.in/sitemap.xml');
+  const sitemap = await page.request.get('/sitemap.xml');
+  expect(sitemap.ok()).toBe(true);
+  expect(await sitemap.text()).toContain('https://haptic-speaking-pacer.sociobot.in/demo');
+
+  await page.goto('/404.html');
+  await expect(page).toHaveTitle('Page not found — Haptic Speaking Pacer');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found');
+  await expect(page.getByRole('link', { name: 'Open the pacer' })).toBeVisible();
 });
 
 test('app shell and saved settings work offline', async ({ page, context }) => {
@@ -136,7 +151,7 @@ test('app shell and saved settings work offline', async ({ page, context }) => {
   await page.reload();
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Find a pace');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Practice a steady speaking pace');
   await expect(page.locator('#network-strip')).toContainText('offline');
   await context.setOffline(false);
 });

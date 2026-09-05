@@ -1,0 +1,58 @@
+[
+  {
+    "id": "demo-sandbox",
+    "claim": "Sample data can be reset without changing real sessions or settings.",
+    "where": "landing action, demo banner, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:demo-sandbox",
+    "sandbox": "seed a real setting and session, enter ?demo=1, reset, start for real, then verify only the real namespace remains"
+  },
+  {
+    "id": "demo-sample-results",
+    "claim": "The demo opens with four populated speaking pace rehearsals.",
+    "where": "landing action, /demo",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:demo-sample-results",
+    "sandbox": "fresh /demo visit; assert named sample output, pace result, chart, and visible session list"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit.",
+    "where": "landing facts, install section, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; visit /demo, activate the service worker, set offline, and reload"
+  },
+  {
+    "id": "local-audio-processing",
+    "claim": "Free practice does not send audio or data to another origin.",
+    "where": "landing facts, privacy page, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:local-audio-processing",
+    "sandbox": "record every browser request during a fresh demo export flow and assert every request is same-origin"
+  },
+  {
+    "id": "data-export",
+    "claim": "Exports practice data as JSON and CSV.",
+    "where": "session history, privacy page, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:data-export",
+    "sandbox": "fresh /demo visit; inspect both downloaded files, their CSV header, and one row per saved session"
+  },
+  {
+    "id": "pace-band",
+    "claim": "Set a target pace from 60 to 240 words per minute.",
+    "where": "settings panel, how it works, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:pace-band",
+    "sandbox": "fresh /demo visit; set both endpoint controls and verify the outputs and demo-only persistence"
+  },
+  {
+    "id": "haptic-cue",
+    "claim": "The selected tactile test cue uses device vibration when available.",
+    "where": "tap pattern control, how it works, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:haptic-cue",
+    "sandbox": "fresh /demo visit with a browser vibration fixture; trigger the selected cue and record the vibration"
+  },
+  {
+    "id": "paid-unlock",
+    "claim": "A verified $7 one-time license reveals all saved sessions and alternate tap patterns.",
+    "where": "one-time license section, terms, README",
+    "test": "npm run build && npm run test:e2e -- --grep @claim:paid-unlock",
+    "sandbox": "fresh /demo visit with a recorded valid license response; restore the token and verify the fourth session appears in the demo namespace"
+  }
+]

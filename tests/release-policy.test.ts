@@ -6,11 +6,13 @@ describe('release response policy', () => {
     const config = JSON.parse(readFileSync('public/staticwebapp.config.json', 'utf8')) as {
       globalHeaders: Record<string, string>;
       routes: Array<{ route: string; headers: Record<string, string> }>;
+      responseOverrides: Record<string, { rewrite: string }>;
     };
     expect(config.globalHeaders['Content-Security-Policy']).toContain("default-src 'self'");
     expect(config.globalHeaders['Permissions-Policy']).toContain('microphone=(self)');
     expect(config.globalHeaders['Cross-Origin-Opener-Policy']).toBe('same-origin');
     expect(config.globalHeaders['Cross-Origin-Resource-Policy']).toBe('same-origin');
     expect(config.routes.find((route) => route.route === '/assets/*')?.headers['Cache-Control']).toContain('immutable');
+    expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html' });
   });
 });
